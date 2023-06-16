@@ -1,0 +1,33 @@
+{
+  "name": "@jartur/solid-reducer",
+  "version": "0.0.1",
+  "description": "",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "vitest",
+    "test": "vitest run",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "lint": "tsc"
+  },
+  "keywords": [
+    "solid",
+    "state",
+    "reducer",
+    "store"
+  ],
+  "author": "J. Artur",
+  "license": "MIT",
+  "devDependencies": {
+    "@changesets/cli": "^2.26.1",
+    "solid-js": "^1.7.6",
+    "tsup": "^7.0.0",
+    "typescript": "^5.1.3",
+    "vitest": "^0.32.2"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.7.6"
+  }
+}
