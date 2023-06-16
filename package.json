@@ -10,7 +10,9 @@
     "dev": "vitest",
     "test": "vitest run",
     "build": "tsup src/index.ts --format cjs,esm --dts",
-    "lint": "tsc"
+    "lint": "tsc",
+    "ci": "pnpm lint && pnpm test && pnpm build",
+    "release": "pnpm lint && pnpm test && pnpm build && changeset publish"
   },
   "keywords": [
     "solid",
