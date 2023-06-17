@@ -1,5 +1,11 @@
 # @jartur/solid-reducer
 
+## 0.0.4
+
+### Patch Changes
+
+- e488ec2: update readme
+
 ## 0.0.3
 
 ### Patch Changes
