@@ -1,5 +1,11 @@
 # @jartur/solid-reducer
 
+## 0.0.3
+
+### Patch Changes
+
+- 7e875f1: introduce dispatch.subset
+
 ## 0.0.2
 
 ### Patch Changes
