@@ -7,6 +7,13 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "private": false,
+  "author": "J. Artur",
+  "license": "MIT",
+  "homepage": "https://github.com/j-artur/solid-reducer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/j-artur/solid-reducer.git"
+  },
   "scripts": {
     "dev": "vitest",
     "test": "vitest run",
@@ -21,8 +28,6 @@
     "reducer",
     "store"
   ],
-  "author": "J. Artur",
-  "license": "MIT",
   "devDependencies": {
     "@changesets/cli": "^2.26.1",
     "solid-js": "^1.7.6",
