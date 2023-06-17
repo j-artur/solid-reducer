@@ -1,5 +1,11 @@
 # @jartur/solid-reducer
 
+## 0.0.5
+
+### Patch Changes
+
+- 421b584: fix some API documentation
+
 ## 0.0.4
 
 ### Patch Changes
