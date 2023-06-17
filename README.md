@@ -79,7 +79,7 @@ console.log(store); // { count: 0, text: "foo" }
 The `createReducer` function takes a reducer function and an initial value and returns a store and a dispatch function.
 
 ```ts
-function createReducer<Store extends object, ActionRecord extends BaseRecord>(
+function createReducer<Store extends object, ActionRecord>(
   reducer: Reducer<Store, ActionRecord>,
   initialValue: Store
 ): [Store<Store>, Dispatcher<ActionRecord>];
@@ -119,11 +119,11 @@ The `dispatch` function receives an action type and a payload and calls the corr
 If the ActionRecord defines a payload of type `void`, there is no second argument.
 
 ```ts
-export type DispatchFn<TActionRecord extends BaseRecord> = <
-  TActionType extends keyof TActionRecord
->(
-  type: TActionType,
-  ...[payload]: void extends TActionRecord[TActionType] ? [] : [payload: TActionRecord[TActionType]]
+export type DispatchFn<ActionRecord> = <ActionType extends keyof ActionRecord>(
+  type: ActionType,
+  ...[payload]: void extends ActionRecord[ActionType]
+    ? []
+    : [payload: ActionRecord[ActionType]]
 ) => void;
 ```
 
@@ -137,9 +137,10 @@ export type Dispatcher<ActionRecord> = DispatchFn<ActionRecord> & {
   ) => SubDispatcher<ActionRecord, Action>;
 };
 
-export type SubDispatcher<ActionRecord, Action extends keyof ActionRecord> = DispatchFn<
-  Pick<ActionRecord, Action>
-> & {
+export type SubDispatcher<
+  ActionRecord,
+  Action extends keyof ActionRecord
+> = DispatchFn<Pick<ActionRecord, Action>> & {
   subset: <SubAction extends Action>(
     this: DispatchFn<Pick<ActionRecord, Action>>,
     actions: SubAction[]
@@ -186,7 +187,9 @@ const Component = () => {
   return <Child dispatch={dispatchCount} />;
 };
 
-const Child = (props: { dispatch: SubDispatcher<ActionRecord, "increment" | "decrement"> }) => {
+const Child = (props: {
+  dispatch: SubDispatcher<ActionRecord, "increment" | "decrement">;
+}) => {
   return <button onClick={() => props.dispatch("increment")}>Increment</button>;
 };
 ```
@@ -195,7 +198,8 @@ If you want the type-safety of a subset, but not the runtime implications, you c
 
 ```ts
 const [store, dispatch] = createReducer(reducer, { count: 0, text: "" });
-const dispatchCount: SubDispatcher<ActionRecord, "increment" | "decrement"> = dispatch;
+const dispatchCount: SubDispatcher<ActionRecord, "increment" | "decrement"> =
+  dispatch;
 
 dispatchIncrement("increment");
 dispatchIncrement("decrement");
@@ -212,7 +216,9 @@ const Component = () => {
   return <Child dispatch={dispatch} />;
 };
 
-const Child = (props: { dispatch: SubDispatcher<ActionRecord, "increment" | "decrement"> }) => {
+const Child = (props: {
+  dispatch: SubDispatcher<ActionRecord, "increment" | "decrement">;
+}) => {
   return <button onClick={() => props.dispatch("increment")}>Increment</button>;
 };
 ```

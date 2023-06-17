@@ -6,8 +6,8 @@
       "files": "*.md",
       "options": {
         "semi": true,
-        "arrowParens": "always",
-        "printWidth": 100
+        "arrowParens": "always"
+
       }
     }
   ]
