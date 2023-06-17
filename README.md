@@ -44,7 +44,7 @@ console.log(store); // { count: 0, text: "foo" }
 ```ts
 import { Reducer, createReducer } from "@jartur/solid-reducer";
 
-type State = {
+type Store = {
   count: number;
   text: string;
 };
@@ -55,7 +55,7 @@ type ActionRecord = {
   setText: string;
 };
 
-const reducer: Reducer<State, ActionRecord> = (set) => ({
+const reducer: Reducer<Store, ActionRecord> = (set) => ({
   increment: () => set("count", (c) => c + 1),
   decrement: () => set("count", (c) => c - 1),
   setText: (payload) => set("text", payload),
@@ -215,4 +215,24 @@ const Component = () => {
 const Child = (props: { dispatch: SubDispatcher<ActionRecord, "increment" | "decrement"> }) => {
   return <button onClick={() => props.dispatch("increment")}>Increment</button>;
 };
+```
+
+### Store
+
+Since `createReducer` is a wrapper around `createStore`, you can use `produce`, `reconcile`, `unwrap`, and anything else you can do with a regular store.
+
+```ts
+import { Reducer, createReducer } from "@jartur/solid-reducer";
+import { produce, unwrap } from "solid-js/store";
+import { ActionRecord, Store } from "./types";
+
+const reducer: Reducer<Store, ActionRecord> = (set) => ({
+  increment: () => set(produce((draft) => draft.count++)),
+  decrement: () => set(produce((draft) => draft.count--)),
+  setText: (payload) => set(produce((draft) => (draft.text = payload))),
+});
+
+const [store, dispatch] = createReducer(reducer, { count: 0, text: "" });
+
+const data = unwrap(store);
 ```
