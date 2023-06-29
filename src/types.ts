@@ -9,8 +9,9 @@ export type ActionMap<TActionRecord extends BaseRecord> = {
 }
 
 export type Reducer<TStore, TActionRecord extends BaseRecord> = (
+  store: Store<TStore>,
   setStore: SetStoreFunction<TStore>,
-  store: Store<TStore>
+  dispatch: DispatchFn<TActionRecord>
 ) => ActionMap<TActionRecord>
 
 export type DispatchFn<TActionRecord extends BaseRecord> = <
