@@ -11,9 +11,9 @@ export function createReducer<
 ): [Store<TStore>, Dispatcher<TActionRecord>] {
   const [store, setStore] = createStore(initialValue, options)
 
-  const handlers = reducer(setStore, store)
-
   const dispatch: DispatchFn<TActionRecord> = (t, ...[p]) => handlers[t](p!)
+  const handlers = reducer(store, setStore, dispatch)
+
   const dispatcher: Dispatcher<TActionRecord> = Object.assign(dispatch, {
     subset,
   })

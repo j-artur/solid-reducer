@@ -29,7 +29,7 @@ const initialValue: Store = {
   todos: [],
 }
 
-const reducer: Reducer<Store, ActionMap> = set => {
+const reducer: Reducer<Store, ActionMap> = (_, set) => {
   return {
     increment: () => set("count", c => c + 1),
     decrement: () => set("count", c => c - 1),
