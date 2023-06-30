@@ -1,5 +1,11 @@
 # @jartur/solid-reducer
 
+## 0.1.0
+
+### Minor Changes
+
+- 35fd32e: add dispatch as an argument to reducer & change the order from [setStore, store] to [store, setStore, dispatch]
+
 ## 0.0.5
 
 ### Patch Changes
