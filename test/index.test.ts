@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { Reducer, createReducer } from "../src"
+import { NestedRecord, Reducer, createReducer } from "../src"
 
 type Todo = {
   id: number
@@ -7,13 +7,18 @@ type Todo = {
   done: boolean
 }
 
-type ActionMap = {
+type ActionRecord = {
   increment: void
   decrement: void
   setName: string
-  addTodo: Todo
-  removeTodo: number
-  toggleTodo: number
+  todos: NestedRecord<{
+    add: Todo
+    remove: number
+    toggle: number
+    nested: NestedRecord<{
+      test: void
+    }>
+  }>
   reset: void
 }
 
@@ -29,21 +34,25 @@ const initialValue: Store = {
   todos: [],
 }
 
-const reducer: Reducer<Store, ActionMap> = (_, set) => {
+const reducer: Reducer<Store, ActionRecord> = (_, set) => {
   return {
     increment: () => set("count", c => c + 1),
     decrement: () => set("count", c => c - 1),
     setName: name => set("name", name),
-    addTodo: todo => set("todos", todos => [...todos, todo]),
-    removeTodo: id =>
-      set("todos", todos => todos.filter(todo => todo.id !== id)),
-    toggleTodo: id =>
-      set(
-        "todos",
-        todo => todo.id === id,
-        "done",
-        done => !done
-      ),
+    todos: {
+      add: todo => set("todos", todos => [...todos, todo]),
+      remove: id => set("todos", todos => todos.filter(todo => todo.id !== id)),
+      toggle: id =>
+        set(
+          "todos",
+          todo => todo.id === id,
+          "done",
+          done => !done
+        ),
+      nested: {
+        test: () => set("count", c => c + 1),
+      },
+    },
     reset: () =>
       set({
         count: 0,
@@ -64,44 +73,114 @@ describe("createReducer", () => {
     expect(store.count).toBe(0)
     dispatch("setName", "bar")
     expect(store.name).toBe("bar")
-    dispatch("addTodo", { id: 1, text: "foo", done: false })
+    dispatch("todos.add", { id: 1, text: "foo", done: false })
     expect(store.todos).toEqual([{ id: 1, text: "foo", done: false }])
-    dispatch("addTodo", { id: 2, text: "bar", done: false })
+    dispatch("todos.add", { id: 2, text: "bar", done: false })
     expect(store.todos).toEqual([
       { id: 1, text: "foo", done: false },
       { id: 2, text: "bar", done: false },
     ])
-    dispatch("removeTodo", 1)
+    dispatch("todos.remove", 1)
     expect(store.todos).toEqual([{ id: 2, text: "bar", done: false }])
-    dispatch("toggleTodo", 2)
+    dispatch("todos.toggle", 2)
     expect(store.todos).toEqual([{ id: 2, text: "bar", done: true }])
     dispatch("reset")
     expect(store).toEqual(initialValue)
   })
 
-  test("subset works", () => {
+  test("unknown action type throws", () => {
+    const [, dispatch] = createReducer(reducer, { ...initialValue })
+
+    expect(() => dispatch("foo" as any)).toThrow('Action "foo" not found')
+  })
+})
+
+describe("dispatch.prefix", () => {
+  test("prefix works", () => {
     const [store, dispatch] = createReducer(reducer, { ...initialValue })
 
-    const todoDispatch = dispatch.subset(["addTodo", "removeTodo"])
+    const todoDispatch = dispatch.prefix("todos")
 
-    todoDispatch("addTodo", { id: 2, text: "baz", done: false })
+    todoDispatch("add", { id: 2, text: "baz", done: false })
     expect(store.todos).toEqual([{ id: 2, text: "baz", done: false }])
-    expect(() => (todoDispatch as typeof dispatch)("increment")).toThrow(
-      'Action "increment" not allowed from this dispatcher'
+    todoDispatch("nested.test")
+    expect(store.count).toBe(1)
+  })
+
+  test("prefix throws on not-allowed action type", () => {
+    const [, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.prefix("todos")
+
+    expect(() => todoDispatch("increment" as any)).toThrow(
+      'Action "increment" not found'
     )
   })
 
-  test("subset works with nested reducers", () => {
+  test("prefix works with nested prefixes", () => {
     const [store, dispatch] = createReducer(reducer, { ...initialValue })
 
-    const todoDispatch = dispatch.subset(["addTodo", "removeTodo"])
+    const todoDispatch = dispatch.prefix("todos")
 
-    const todoDispatch2 = todoDispatch.subset(["addTodo"])
+    const todoDispatch2 = todoDispatch.prefix("nested")
 
-    todoDispatch2("addTodo", { id: 3, text: "qux", done: false })
+    todoDispatch2("test")
+    expect(store.count).toBe(1)
+  })
+
+  test("prefix works with subset", () => {
+    const [store, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.prefix("todos")
+
+    const todoDispatch2 = todoDispatch.subset(["nested"])
+
+    todoDispatch2("nested.test")
+    expect(store.count).toBe(1)
+  })
+
+  test("prefixed subset throws on not-allowed action type", () => {
+    const [, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.prefix("todos")
+
+    const todoDispatch2 = todoDispatch.subset(["nested"])
+
+    expect(() => todoDispatch2("add" as any)).toThrow('Action "add" not found')
+  })
+})
+
+describe("dispatch.subset", () => {
+  test("subset works", () => {
+    const [store, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.subset(["todos"])
+
+    todoDispatch("todos.add", { id: 2, text: "baz", done: false })
+    expect(store.todos).toEqual([{ id: 2, text: "baz", done: false }])
+    expect(() => (todoDispatch as typeof dispatch)("increment")).toThrow(
+      'Action "increment" not found'
+    )
+  })
+
+  test("subset throws on not-allowed action type", () => {
+    const [, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.subset(["todos"])
+
+    expect(() => todoDispatch("increment" as any)).toThrow(
+      'Action "increment" not found'
+    )
+  })
+
+  test("subset works with nested subsets", () => {
+    const [store, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.subset(["todos"])
+
+    const todoDispatch2 = todoDispatch.subset(["todos.add"])
+
+    todoDispatch2("todos.add", { id: 3, text: "qux", done: false })
     expect(store.todos).toEqual([{ id: 3, text: "qux", done: false }])
-    expect(() =>
-      (todoDispatch2 as typeof todoDispatch)("removeTodo", 3)
-    ).toThrow('Action "removeTodo" not allowed from this dispatcher')
   })
 })
