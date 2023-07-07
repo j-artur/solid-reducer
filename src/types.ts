@@ -20,6 +20,30 @@ export type PathIntoAction<T extends BaseRecord> = keyof {
 } &
   string
 
+export type PrefixInto<T extends BaseRecord> = keyof {
+  [K in keyof T as T[K] extends NestedRecord
+    ? K | `${K & string}.${PrefixInto<UnwrapRecord<T[K]>> & string}`
+    : never]: any
+} &
+  string
+
+export type SubRecord<
+  T extends BaseRecord,
+  P extends PrefixInto<T>
+> = P extends keyof T
+  ? T[P] extends NestedRecord
+    ? UnwrapRecord<T[P]>
+    : never
+  : P extends `${infer K}.${infer Rest}`
+  ? K extends keyof T
+    ? T[K] extends NestedRecord
+      ? Rest extends PrefixInto<UnwrapRecord<T[K]>>
+        ? SubRecord<UnwrapRecord<T[K]>, Rest>
+        : never
+      : never
+    : never
+  : never
+
 type Payload<
   T extends BaseRecord,
   P extends PathIntoAction<T>
@@ -104,6 +128,24 @@ export type Dispatcher<TRecord extends BaseRecord> = DispatchFn<TRecord> & {
     this: DispatchFn<TRecord>,
     actions: TAction[]
   ) => SubDispatcher<TRecord, TAction>
+  prefix: <TPrefix extends PrefixInto<TRecord>>(
+    this: DispatchFn<TRecord>,
+    prefix: TPrefix
+  ) => PrefixedDispatcher<TRecord, TPrefix>
+}
+
+export type PrefixedDispatcher<
+  TRecord extends BaseRecord,
+  TPrefix extends PrefixInto<TRecord>
+> = DispatchFn<SubRecord<TRecord, TPrefix>> & {
+  subset: <TAction extends PathInto<SubRecord<TRecord, TPrefix>>>(
+    this: DispatchFn<SubRecord<TRecord, TPrefix>>,
+    actions: TAction[]
+  ) => SubDispatcher<SubRecord<TRecord, TPrefix>, TAction>
+  prefix: <TNewPrefix extends PrefixInto<SubRecord<TRecord, TPrefix>>>(
+    this: DispatchFn<SubRecord<TRecord, TPrefix>>,
+    prefix: TNewPrefix
+  ) => PrefixedDispatcher<SubRecord<TRecord, TPrefix>, TNewPrefix>
 }
 
 export type SubDispatcher<

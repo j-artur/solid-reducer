@@ -1,4 +1,5 @@
 import { Store, createStore } from "solid-js/store"
+import { ReducerError } from "./error"
 import {
   Action,
   ActionMap,
@@ -7,9 +8,12 @@ import {
   Dispatcher,
   PathInto,
   PathIntoAction,
+  PrefixInto,
+  PrefixedDispatcher,
   Reducer,
   RestrictRecord,
   SubDispatcher,
+  SubRecord,
 } from "./types"
 
 function get<T extends BaseRecord>(
@@ -41,7 +45,7 @@ function handle<TRecord extends BaseRecord, P extends PathIntoAction<TRecord>>(
   const action = get(record, path.split("."))
 
   if (action === null) {
-    throw new Error(`Action "${path}" not found`)
+    throw new ReducerError(`Action "${path}" not found`)
   }
 
   return action as Action<TRecord, P>
@@ -64,6 +68,7 @@ export function createReducer<
 
   const dispatcher: Dispatcher<TRecord> = Object.assign(dispatch, {
     subset,
+    prefix,
   })
 
   return [store, dispatcher]
@@ -73,7 +78,7 @@ function subset<TRecord extends BaseRecord, TAction extends PathInto<TRecord>>(
   this: DispatchFn<TRecord>,
   actions: TAction[]
 ): SubDispatcher<TRecord, TAction> {
-  const subdispatch: DispatchFn<RestrictRecord<TRecord, TAction>> = (
+  const dispatch: DispatchFn<RestrictRecord<TRecord, TAction>> = (
     action,
     ...[payload]
   ) => {
@@ -90,11 +95,38 @@ function subset<TRecord extends BaseRecord, TAction extends PathInto<TRecord>>(
     })
 
     if (index === -1) {
-      throw new Error(`Action "${action}" not found`)
+      throw new ReducerError(`Action "${action}" not found`)
     }
 
     this(action as PathIntoAction<TRecord>, ...([payload] as any))
   }
 
-  return Object.assign(subdispatch, { subset })
+  return Object.assign(dispatch, { subset })
+}
+
+function prefix<
+  TRecord extends BaseRecord,
+  TPrefix extends PrefixInto<TRecord>
+>(
+  this: DispatchFn<TRecord>,
+  pathPrefix: TPrefix
+): PrefixedDispatcher<TRecord, TPrefix> {
+  const dispatch: DispatchFn<SubRecord<TRecord, TPrefix>> = (
+    action,
+    ...[payload]
+  ) => {
+    try {
+      this(
+        `${pathPrefix}.${action}` as PathIntoAction<TRecord>,
+        ...([payload] as any)
+      )
+    } catch (error) {
+      if (error instanceof ReducerError) {
+        throw new ReducerError(`Action "${action}" not found`, { cause: error })
+      }
+      throw error
+    }
+  }
+
+  return Object.assign(dispatch, { subset, prefix })
 }

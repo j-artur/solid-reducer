@@ -15,6 +15,9 @@ type ActionRecord = {
     add: Todo
     remove: number
     toggle: number
+    nested: NestedRecord<{
+      test: void
+    }>
   }>
   reset: void
 }
@@ -46,6 +49,9 @@ const reducer: Reducer<Store, ActionRecord> = (_, set) => {
           "done",
           done => !done
         ),
+      nested: {
+        test: () => set("count", c => c + 1),
+      },
     },
     reset: () =>
       set({
@@ -87,7 +93,64 @@ describe("createReducer", () => {
 
     expect(() => dispatch("foo" as any)).toThrow('Action "foo" not found')
   })
+})
 
+describe("dispatch.prefix", () => {
+  test("prefix works", () => {
+    const [store, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.prefix("todos")
+
+    todoDispatch("add", { id: 2, text: "baz", done: false })
+    expect(store.todos).toEqual([{ id: 2, text: "baz", done: false }])
+    todoDispatch("nested.test")
+    expect(store.count).toBe(1)
+  })
+
+  test("prefix throws on not-allowed action type", () => {
+    const [, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.prefix("todos")
+
+    expect(() => todoDispatch("increment" as any)).toThrow(
+      'Action "increment" not found'
+    )
+  })
+
+  test("prefix works with nested prefixes", () => {
+    const [store, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.prefix("todos")
+
+    const todoDispatch2 = todoDispatch.prefix("nested")
+
+    todoDispatch2("test")
+    expect(store.count).toBe(1)
+  })
+
+  test("prefix works with subset", () => {
+    const [store, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.prefix("todos")
+
+    const todoDispatch2 = todoDispatch.subset(["nested"])
+
+    todoDispatch2("nested.test")
+    expect(store.count).toBe(1)
+  })
+
+  test("prefixed subset throws on not-allowed action type", () => {
+    const [, dispatch] = createReducer(reducer, { ...initialValue })
+
+    const todoDispatch = dispatch.prefix("todos")
+
+    const todoDispatch2 = todoDispatch.subset(["nested"])
+
+    expect(() => todoDispatch2("add" as any)).toThrow('Action "add" not found')
+  })
+})
+
+describe("dispatch.subset", () => {
   test("subset works", () => {
     const [store, dispatch] = createReducer(reducer, { ...initialValue })
 
