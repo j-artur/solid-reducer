@@ -1,5 +1,13 @@
 # @jartur/solid-reducer
 
+## 0.2.0
+
+### Minor Changes
+
+- d31c61a: add nested actions and prefixes
+
+  \*\*\* still missing documentation
+
 ## 0.1.0
 
 ### Minor Changes
