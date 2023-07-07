@@ -1,41 +1,99 @@
 import { Store, createStore } from "solid-js/store"
-import { BaseRecord, DispatchFn, Dispatcher, Reducer } from "./types"
+import {
+  Action,
+  ActionMap,
+  BaseRecord,
+  DispatchFn,
+  Dispatcher,
+  PathInto,
+  PathIntoAction,
+  Reducer,
+  RestrictRecord,
+  SubDispatcher,
+} from "./types"
+
+function get<T extends BaseRecord>(
+  record: T,
+  path: string[],
+  index = 0
+): ((payload: unknown) => void) | null {
+  const key = path[index]
+  if (key === undefined) return null
+
+  const value = record[key]
+  if (value === undefined) return null
+
+  if (typeof value === "function") {
+    return value
+  }
+
+  if (typeof value === "object") {
+    return get(value, path, index + 1)
+  }
+
+  return null
+}
+
+function handle<TRecord extends BaseRecord, P extends PathIntoAction<TRecord>>(
+  record: ActionMap<TRecord>,
+  path: P
+): Action<TRecord, P> {
+  const action = get(record, path.split("."))
+
+  if (action === null) {
+    throw new Error(`Action "${path}" not found`)
+  }
+
+  return action as Action<TRecord, P>
+}
 
 export function createReducer<
   TStore extends object,
-  TActionRecord extends BaseRecord
+  TRecord extends BaseRecord
 >(
-  reducer: Reducer<TStore, TActionRecord>,
+  reducer: Reducer<TStore, TRecord>,
   initialValue: TStore,
   options?: { name?: string }
-): [Store<TStore>, Dispatcher<TActionRecord>] {
+): [Store<TStore>, Dispatcher<TRecord>] {
   const [store, setStore] = createStore(initialValue, options)
 
-  const dispatch: DispatchFn<TActionRecord> = (t, ...[p]) => handlers[t](p!)
+  const dispatch: DispatchFn<TRecord> = (action, ...[payload]) => {
+    handle(handlers, action)(payload!)
+  }
   const handlers = reducer(store, setStore, dispatch)
 
-  const dispatcher: Dispatcher<TActionRecord> = Object.assign(dispatch, {
+  const dispatcher: Dispatcher<TRecord> = Object.assign(dispatch, {
     subset,
   })
 
   return [store, dispatcher]
 }
 
-function subset<
-  TActionRecord extends BaseRecord,
-  TAction extends keyof TActionRecord & string
->(
-  this: DispatchFn<TActionRecord>,
+function subset<TRecord extends BaseRecord, TAction extends PathInto<TRecord>>(
+  this: DispatchFn<TRecord>,
   actions: TAction[]
-): Dispatcher<Pick<TActionRecord, TAction>> {
-  const subdispatch: DispatchFn<Pick<TActionRecord, TAction>> = (
-    type,
+): SubDispatcher<TRecord, TAction> {
+  const subdispatch: DispatchFn<RestrictRecord<TRecord, TAction>> = (
+    action,
     ...[payload]
   ) => {
-    if (!actions.includes(type)) {
-      throw new Error(`Action "${type}" not allowed from this dispatcher`)
+    const prefixes = actions.map(action => action.split("."))
+
+    const path = action.split(".")
+
+    const index = prefixes.findIndex(prefix => {
+      if (prefix.length > path.length) return false
+      for (let i = 0; i < prefix.length; i++) {
+        if (prefix[i] !== path[i]) return false
+      }
+      return true
+    })
+
+    if (index === -1) {
+      throw new Error(`Action "${action}" not found`)
     }
-    this(type, ...([payload] as any))
+
+    this(action as PathIntoAction<TRecord>, ...([payload] as any))
   }
 
   return Object.assign(subdispatch, { subset })
